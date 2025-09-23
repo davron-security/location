@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Joylashuvni ulashish</title>
+</head>
+<body>
+  <h3>Joylashuvni ulashish</h3>
+  <label><input type="checkbox" id="consent"> Men roziman — joylashuvim yuborilsin</label><br><br>
+  <button id="shareBtn">Joylashuvni yuborish</button>
+  <p id="status"></p>
+
+  <script>
+    const btn = document.getElementById('shareBtn');
+    const consent = document.getElementById('consent');
+    const status = document.getElementById('status');
+
+    function setStatus(s){ status.textContent = s; }
+
+    btn.addEventListener('click', () => {
+      if (!consent.checked) { setStatus('Iltimos, avval rozilikni belgilang.'); return; }
+      if (!navigator.geolocation) { setStatus('Brauzer Geolocation-ni qo‘llab-quvvatlamaydi.'); return; }
+
+      setStatus('Brauzerdan ruxsat so‘raladi...');
+      navigator.geolocation.getCurrentPosition(async (pos) => {
+        const payload = {
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          timestamp: new Date().toISOString(),
+          consent: true
+        };
+
+        try {
+          const res = await fetch('/api/location', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const j = await res.json();
+          if (!res.ok) throw new Error(j.error || res.status);
+          setStatus('Joylashuv yuborildi va Telegramga jo‘natildi.');
+        } catch (e) {
+          setStatus('Yuborishda xato: ' + e.message);
+        }
+      }, (err) => {
+        if (err.code === err.PERMISSION_DENIED) setStatus('Foydalanuvchi ruxsat bermadi.');
+        else setStatus('Xato: ' + err.message);
+      }, {timeout:10000});
+    });
+  </script>
+</body>
+</html>
